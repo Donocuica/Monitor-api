@@ -1,0 +1,1 @@
+{"cliente":"Empresa A","proveedor":"Proveedor X","guia":"GR-001","origen":"Lima","destino":"Cusco"}
