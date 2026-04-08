@@ -2,49 +2,84 @@ const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
 const morgan = require("morgan");
+const fs = require("fs");
+const path = require("path");
 
-const { monitor, metrics } = require("./middleware/monitor");
+const { monitor } = require("./middleware/monitor");
 const auth = require("./middleware/auth");
-const db = require("./db/database");
 const guiaRoutes = require("./routes/guiaRoutes");
+const { generarArchivo } = require("./services/systemService");
 
 const app = express();
 
+// ======================
+// MIDDLEWARES
+// ======================
 app.use(express.json());
 app.use(cors());
 app.use(helmet());
 app.use(morgan("dev"));
-
 app.use(monitor);
 
-// ruta segura
+// ======================
+// RUTA SEGURA
+// ======================
 app.get("/api/data", auth, (req, res) => {
   res.json({ mensaje: "OK seguro" });
 });
 
-// error
+// ======================
+// ERROR SIMULADO
+// ======================
 app.get("/api/error", (req, res) => {
   res.status(500).json({ error: "Error interno" });
 });
 
-// rutas empresariales
+// ======================
+// RUTAS API
+// ======================
 app.use("/api", guiaRoutes);
 
-// dashboard data
-app.get("/dashboard-data", (req, res) => {
-  db.all(`SELECT * FROM logs ORDER BY id DESC LIMIT 20`, [], (err, rows) => {
-    res.json({
-      total: metrics.total,
-      exitos: metrics.exitos,
-      errores: metrics.errores,
-      logs: rows
-    });
-  });
+// ======================
+// LISTAR ARCHIVOS
+// ======================
+app.get("/archivos", (req, res) => {
+  const dir = path.join(__dirname, "storage/tmp");
+
+  if (!fs.existsSync(dir)) {
+    return res.json([]);
+  }
+
+  const files = fs.readdirSync(dir);
+  res.json(files);
 });
 
-// frontend
+// ======================
+// FRONTEND STATIC
+// ======================
 app.use(express.static("public"));
 
+// ======================
+// INICIAR SERVIDOR
+// ======================
 app.listen(3000, () => {
   console.log("🔥 Servidor en http://localhost:3000");
+  console.log("🚀 Monitor iniciado...");
+
+  // ======================
+  // PROCESO AUTOMÁTICO
+  // ======================
+
+  if (typeof generarArchivo === "function") {
+    // ejecutar una vez al iniciar
+    generarArchivo();
+
+    // cada 3 minutos
+    setInterval(() => {
+      generarArchivo();
+    }, 180000);
+
+  } else {
+    console.log("⚠️ generarArchivo no está definido");
+  }
 });

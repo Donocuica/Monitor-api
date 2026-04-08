@@ -1,188 +1,86 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<title>Monitor API Pro</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<style>
-* { margin:0; padding:0; box-sizing:border-box; font-family:"Segoe UI"; }
-body { display:flex; background:#0f172a; color:white; }
+  <meta charset="UTF-8">
+  <title>Monitor VPS Logs</title>
 
-/* SIDEBAR */
-.sidebar { width:220px; background:#020617; height:100vh; padding:20px; }
-.sidebar h2 { margin-bottom:30px; color:#38bdf8; }
-.sidebar ul { list-style:none; }
-.sidebar li { margin:15px 0; cursor:pointer; color:#94a3b8; }
-.sidebar li:hover { color:white; }
-
-/* MAIN */
-.main { flex:1; padding:20px; }
-.header { font-size:22px; margin-bottom:20px; }
-
-/* CARDS */
-.cards { display:grid; grid-template-columns:repeat(3,1fr); gap:20px; }
-.card { padding:20px; border-radius:15px; background:#1e293b; box-shadow:0 10px 25px rgba(0,0,0,0.3); text-align:center; }
-.card h2 { font-size:28px; }
-.total { border-left:5px solid #3b82f6; }
-.ok { border-left:5px solid #22c55e; }
-.error { border-left:5px solid #ef4444; }
-
-/* GRID */
-.grid { display:grid; grid-template-columns:2fr 1fr; gap:20px; margin-top:20px; }
-
-/* TABLE */
-table { width:100%; background:#1e293b; border-radius:10px; overflow:hidden; }
-th, td { padding:10px; text-align:left; }
-th { background:#020617; }
-tr:hover { background:#334155; }
-
-/* BUTTON */
-button { margin-top:15px; padding:10px; background:#22c55e; border:none; border-radius:8px; cursor:pointer; color:white; }
-canvas { background:#1e293b; border-radius:10px; padding:10px; }
-</style>
-</head>
-<body>
-
-<!-- SIDEBAR -->
-<div class="sidebar">
-  <h2>⚡ Monitor</h2>
-  <ul>
-    <li>Dashboard</li>
-    <li>Logs</li>
-    <li>Reportes</li>
-    <li>Configuración</li>
-  </ul>
-</div>
-
-<!-- MAIN -->
-<div class="main">
-  <div class="header">Panel de Control</div>
-
-  <!-- CARDS -->
-  <div class="cards">
-    <div class="card total">
-      <h2 id="total">0</h2>
-      <p>Total Requests</p>
-    </div>
-    <div class="card ok">
-      <h2 id="ok">0</h2>
-      <p>Exitosos</p>
-    </div>
-    <div class="card error">
-      <h2 id="error">0</h2>
-      <p>Errores</p>
-    </div>
-  </div>
-
-  <!-- GRID -->
-  <div class="grid">
-
-    <!-- TABLA COMPLETA -->
-    <div>
-      <h3>Logs recientes</h3>
-      <table id="logsTable">
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>IP</th>
-            <th>Método</th>
-            <th>Ruta</th>
-            <th>Status</th>
-            <th>Tiempo</th>
-            <th>Fecha</th>
-          </tr>
-        </thead>
-        <tbody>
-          <!-- Se llenará dinámicamente -->
-        </tbody>
-      </table>
-    </div>
-
-    <!-- PANEL DERECHO -->
-    <div>
-      <h3>Estadísticas</h3>
-      <canvas id="grafico"></canvas>
-
-      <button onclick="enviarGuia()">Enviar Guía</button>
-    </div>
-
-  </div>
-</div>
-
-<script>
-let chart;
-async function cargar() {
-  try {
-    const res = await fetch("http://localhost:3000/dashboard-data"); // <-- URL CORRECTA
-    const data = await res.json();
-    console.log("DATA:", data);
-
-    // Actualizar cards
-    document.getElementById('total').innerText = data.total ?? 0;
-    document.getElementById('ok').innerText = data.exitos ?? 0;
-    document.getElementById('error').innerText = data.errores ?? 0;
-
-    // Actualizar tabla
-    const tbody = document.getElementById('logsTable').querySelector('tbody');
-    tbody.innerHTML = '';
-    if (!data.logs || data.logs.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="7">Sin datos aún </td></tr>`;
-    } else {
-      data.logs.forEach(log => {
-        const row = document.createElement('tr');
-        row.innerHTML = `
-          <td>${log.id}</td>
-          <td>${log.ip}</td>
-          <td>${log.metodo}</td>
-          <td>${log.ruta}</td>
-          <td>${log.status}</td>
-          <td>${log.tiempo} ms</td>
-          <td>${log.fecha}</td>
-        `;
-        tbody.appendChild(row);
-      });
+  <style>
+    body {
+      font-family: Arial;
+      background: #0f172a;
+      color: white;
+      padding: 20px;
     }
 
-    // Actualizar gráfico
-    const ctx = document.getElementById('grafico');
-    if (chart) chart.destroy();
-    chart = new Chart(ctx, {
-      type: 'doughnut',
-      data: {
-        labels: ["Exitosos", "Errores"],
-        datasets: [{ data: [data.exitos ?? 0, data.errores ?? 0], backgroundColor: ["#22c55e","#ef4444"] }]
-      },
-      options: { responsive:true, plugins:{ legend:{ position:'bottom' } } }
-    });
+    input, button {
+      padding: 10px;
+      margin: 5px;
+      border-radius: 5px;
+      border: none;
+    }
 
-  } catch(err) {
-    console.error("Error al cargar dashboard:", err);
-  }
-}
-// Simula botón enviar guía
-async function enviarGuia() {
-  try {
-    await fetch("/api/guia", {
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({
-        cliente:"Empresa Pro",
-        proveedor:"Proveedor X",
-        guia:"GR-2026",
-        origen:"Lima",
-        destino:"Cusco"
-      })
-    });
-    cargar();
-  } catch(err) {
-    console.error("Error al enviar guía:", err);
-  }
-}
+    input {
+      width: 400px;
+    }
 
-// Auto refresco
-setInterval(cargar,2000);
-cargar();
-</script>
+    button {
+      cursor: pointer;
+      background: #2563eb;
+      color: white;
+    }
+
+    button:hover {
+      background: #1d4ed8;
+    }
+
+    .box {
+      margin-top: 20px;
+      background: #111827;
+      padding: 15px;
+      border-radius: 10px;
+      white-space: pre-wrap;
+    }
+
+    .title {
+      font-size: 18px;
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <h2>📄 Visor de Logs VPS</h2>
+
+  <p>Ingresa el nombre del archivo:</p>
+
+  <input id="fileName" placeholder="monitor_2026-03-31_10001.txt">
+  <button onclick="verLog()">Ver Log</button>
+
+  <div class="box">
+    <div class="title">Contenido:</div>
+    <pre id="output">Esperando archivo...</pre>
+  </div>
+
+  <script>
+    async function verLog() {
+      const file = document.getElementById("fileName").value;
+
+      if (!file) {
+        alert("Ingresa un archivo");
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/log?file=${file}`);
+        const text = await res.text();
+
+        document.getElementById("output").innerHTML = text;
+      } catch (err) {
+        document.getElementById("output").innerText = "Error al cargar archivo";
+      }
+    }
+  </script>
 
 </body>
 </html>
