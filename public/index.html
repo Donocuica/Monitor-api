@@ -1,86 +1,115 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>Monitor VPS Logs</title>
+<meta charset="UTF-8">
+<title>Monitor VPS</title>
 
-  <style>
-    body {
-      font-family: Arial;
-      background: #0f172a;
-      color: white;
-      padding: 20px;
-    }
+<style>
+body {
+  font-family: Arial;
+  background: #0f172a;
+  color: white;
+  padding: 20px;
+}
 
-    input, button {
-      padding: 10px;
-      margin: 5px;
-      border-radius: 5px;
-      border: none;
-    }
+table {
+  width: 100%;
+  background: #1e293b;
+}
 
-    input {
-      width: 400px;
-    }
+th, td {
+  padding: 12px;
+}
 
-    button {
-      cursor: pointer;
-      background: #2563eb;
-      color: white;
-    }
+th {
+  background: #020617;
+}
 
-    button:hover {
-      background: #1d4ed8;
-    }
+button {
+  padding: 6px 10px;
+  margin: 2px;
+  border: none;
+  cursor: pointer;
+}
 
-    .box {
-      margin-top: 20px;
-      background: #111827;
-      padding: 15px;
-      border-radius: 10px;
-      white-space: pre-wrap;
-    }
+.view { background: blue; color: white; }
+.down { background: green; color: white; }
 
-    .title {
-      font-size: 18px;
-      margin-bottom: 10px;
-    }
-  </style>
+pre {
+  background: black;
+  padding: 10px;
+  margin-top: 20px;
+}
+</style>
 </head>
 
 <body>
+<h2>📁 Archivos generados</h2>
 
-  <h2>📄 Visor de Logs VPS</h2>
+<table border="1">
+<thead>
+<tr>
+<th>Archivo</th>
+<th>Acciones</th>
+</tr>
+</thead>
 
-  <p>Ingresa el nombre del archivo:</p>
+<tbody id="tabla">
+<tr><td colspan="2">Cargando...</td></tr>
+</tbody>
+</table>
 
-  <input id="fileName" placeholder="monitor_2026-03-31_10001.txt">
-  <button onclick="verLog()">Ver Log</button>
+<h2>📄 Contenido</h2>
+<pre id="contenido">---</pre>
 
-  <div class="box">
-    <div class="title">Contenido:</div>
-    <pre id="output">Esperando archivo...</pre>
-  </div>
+<script>
+async function cargarArchivos() {
+  try {
+    console.log("🚀 LLAMANDO A /files...");
 
-  <script>
-    async function verLog() {
-      const file = document.getElementById("fileName").value;
+    const res = await fetch("/files");
+    const files = await res.json();
 
-      if (!file) {
-        alert("Ingresa un archivo");
-        return;
-      }
+    console.log("📄 RESPUESTA:", files);
 
-      try {
-        const res = await fetch(`/api/log?file=${file}`);
-        const text = await res.text();
+    let html = "";
 
-        document.getElementById("output").innerHTML = text;
-      } catch (err) {
-        document.getElementById("output").innerText = "Error al cargar archivo";
-      }
+    if (!files.length) {
+      html = "<tr><td colspan='2'>No hay archivos</td></tr>";
+    } else {
+      files.forEach(f => {
+        html += `
+          <tr>
+            <td>${f}</td>
+            <td>
+              <button class="view" onclick="ver('${f}')">Ver</button>
+              <button class="down" onclick="descargar('${f}')">Descargar</button>
+            </td>
+          </tr>
+        `;
+      });
     }
-  </script>
+
+    document.getElementById("tabla").innerHTML = html;
+
+  } catch (err) {
+    console.error("❌ ERROR:", err);
+  }
+}
+
+async function ver(file) {
+  const res = await fetch("/view/" + file);
+  const text = await res.text();
+  document.getElementById("contenido").innerText = text;
+}
+
+function descargar(file) {
+  window.open("/download/" + file);
+}
+
+setInterval(cargarArchivos, 3000);
+cargarArchivos();
+</script>
 
 </body>
 </html>

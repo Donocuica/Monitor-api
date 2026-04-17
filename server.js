@@ -6,80 +6,73 @@ const fs = require("fs");
 const path = require("path");
 
 const { monitor } = require("./middleware/monitor");
-const auth = require("./middleware/auth");
 const guiaRoutes = require("./routes/guiaRoutes");
 const { generarArchivo } = require("./services/systemService");
 
 const app = express();
 
-// ======================
-// MIDDLEWARES
-// ======================
 app.use(express.json());
 app.use(cors());
-app.use(helmet());
+
+app.use(
+  helmet({
+    contentSecurityPolicy: false
+  })
+);
+
 app.use(morgan("dev"));
 app.use(monitor);
 
-// ======================
-// RUTA SEGURA
-// ======================
-app.get("/api/data", auth, (req, res) => {
-  res.json({ mensaje: "OK seguro" });
-});
-
-// ======================
-// ERROR SIMULADO
-// ======================
-app.get("/api/error", (req, res) => {
-  res.status(500).json({ error: "Error interno" });
-});
-
-// ======================
-// RUTAS API
-// ======================
-app.use("/api", guiaRoutes);
-
-// ======================
-// LISTAR ARCHIVOS
-// ======================
-app.get("/archivos", (req, res) => {
+app.get("/files", (req, res) => {
   const dir = path.join(__dirname, "storage/tmp");
 
-  if (!fs.existsSync(dir)) {
-    return res.json([]);
-  }
+  if (!fs.existsSync(dir)) return res.json([]);
 
-  const files = fs.readdirSync(dir);
+  let files = fs.readdirSync(dir);
+
+  files = files.sort((a, b) => {
+    return fs.statSync(path.join(dir, b)).mtime -
+           fs.statSync(path.join(dir, a)).mtime;
+  });
+
+  console.log("📂 Archivos enviados:", files);
+
+  res.setHeader("Cache-Control", "no-store");
   res.json(files);
 });
 
-// ======================
-// FRONTEND STATIC
-// ======================
+app.get("/view/:name", (req, res) => {
+  const filePath = path.join(__dirname, "storage/tmp", req.params.name);
+
+  if (!fs.existsSync(filePath)) {
+    return res.send("Archivo no encontrado");
+  }
+
+  const content = fs.readFileSync(filePath, "utf-8");
+
+  res.send(content); 
+});
+
+
+app.get("/download/:name", (req, res) => {
+  const filePath = path.join(__dirname, "storage/tmp", req.params.name);
+
+  if (!fs.existsSync(filePath)) {
+    return res.send("Archivo no encontrado");
+  }
+
+  res.download(filePath);
+});
+
+
 app.use(express.static("public"));
 
-// ======================
-// INICIAR SERVIDOR
-// ======================
-app.listen(3000, () => {
-  console.log("🔥 Servidor en http://localhost:3000");
-  console.log("🚀 Monitor iniciado...");
+app.listen(3000, "0.0.0.0", () => {
+  console.log("🔥 Servidor activo");
 
-  // ======================
-  // PROCESO AUTOMÁTICO
-  // ======================
+  generarArchivo();
 
-  if (typeof generarArchivo === "function") {
-    // ejecutar una vez al iniciar
+  setInterval(() => {
     generarArchivo();
-
-    // cada 3 minutos
-    setInterval(() => {
-      generarArchivo();
-    }, 180000);
-
-  } else {
-    console.log("⚠️ generarArchivo no está definido");
-  }
+  }, 180000);
 });

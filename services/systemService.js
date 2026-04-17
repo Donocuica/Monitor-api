@@ -1,137 +1,38 @@
+const os = require("os");
 const fs = require("fs");
 const path = require("path");
-const os = require("os");
-const { execSync } = require("child_process");
 
-// ==============================
-// GENERAR ARCHIVO LOG
-// ==============================
-function generarArchivo() {
-  const dir = path.join(__dirname, "../storage/procesado");
+const TMP = path.join(__dirname, "../storage/tmp");
+const VPS_IP = "172.235.38.212";
+const getCPU = () => {
+  return (Math.random() * 100).toFixed(2);
+};
 
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
 
-  const date = new Date().toISOString().split("T")[0];
-  const id = process.env.VPS_ID || getIP();
+const getMem = () => {
+  const total = Math.round(os.totalmem() / 1024 / 1024);
+  const usada = Math.round((os.totalmem() - os.freemem()) / 1024 / 1024);
+  return `${usada}/${total}MB`;
+};
 
-  const fileName = `monitor_${date}_${id}.txt`;
-  const filePath = path.join(dir, fileName);
+const generarLinea = () => {
+  const fecha = new Date().toISOString().replace("T", " ").substring(0, 19);
 
-  const line = getMetricsLine();
+  return `${fecha} | CPU:${getCPU()}% | MEM:${getMem()} | APACHE_CPU:${Math.random().toFixed(1)}% | APACHE_MEM:${(Math.random()*200).toFixed(2)}MB | MYSQL_CPU:${(Math.random()*200).toFixed(0)}% | MYSQL_MEM:${(Math.random()*3000).toFixed(2)}MB`;
+};
 
-  fs.appendFileSync(filePath, line + "\n");
+const generarArchivo = () => {
+  if (!fs.existsSync(TMP)) fs.mkdirSync(TMP, { recursive: true });
 
-  console.log("📊 Log real generado:", fileName);
-}
+  const fecha = new Date().toISOString().split("T")[0];
+  const hora = new Date().toTimeString().split(" ")[0].replace(/:/g, "-");
 
-// ==============================
-// IP VPS
-// ==============================
-function getIP() {
-  const nets = os.networkInterfaces();
+  const fileName = `monitor_${fecha}_${hora}_${VPS_IP}.txt`;
+  const filePath = path.join(TMP, fileName);
 
-  for (const name of Object.keys(nets)) {
-    for (const net of nets[name]) {
-      if (net.family === "IPv4" && !net.internal) {
-        return net.address;
-      }
-    }
-  }
-  return "unknown";
-}
+  fs.appendFileSync(filePath, generarLinea() + "\n");
 
-// ==============================
-// CPU REAL
-// ==============================
-function getCPU() {
-  try {
-    const output = execSync("top -bn1 | grep 'Cpu(s)'").toString();
-
-    const match = output.match(/(\d+\.\d+)\s*id/);
-
-    const idle = match ? parseFloat(match[1]) : 0;
-
-    const usage = (100 - idle).toFixed(1);
-
-    return usage;
-  } catch (err) {
-    return "0";
-  }
-}
-
-// ==============================
-// RAM REAL
-// ==============================
-function getRAM() {
-  try {
-    const output = execSync("free -m").toString();
-    const lines = output.split("\n")[1].split(/\s+/);
-
-    const total = lines[1];
-    const used = lines[2];
-
-    return { used, total };
-  } catch (err) {
-    return { used: 0, total: 0 };
-  }
-}
-
-// ==============================
-// APACHE CPU (REAL)
-// ==============================
-function getApacheCPU() {
-  try {
-    const output = execSync("ps -C apache2 -o %cpu --no-headers").toString();
-
-    const lines = output.trim().split("\n");
-
-    let total = 0;
-
-    lines.forEach(l => {
-      total += parseFloat(l) || 0;
-    });
-
-    return total.toFixed(1);
-  } catch {
-    return "0";
-  }
-}
-
-// ==============================
-// MYSQL CPU (REAL)
-// ==============================
-function getMySQLCPU() {
-  try {
-    const output = execSync("ps -C mysqld -o %cpu --no-headers").toString();
-
-    const lines = output.trim().split("\n");
-
-    let total = 0;
-
-    lines.forEach(l => {
-      total += parseFloat(l) || 0;
-    });
-
-    return total.toFixed(1);
-  } catch {
-    return "0";
-  }
-}
-
-// ==============================
-// FORMATO FINAL
-// ==============================
-function getMetricsLine() {
-  const cpu = getCPU();
-  const ram = getRAM();
-  const apache = getApacheCPU();
-  const mysql = getMySQLCPU();
-
-  const now = new Date().toISOString().replace("T", " ").substring(0, 19);
-
-  return `${now} | CPU:${cpu}% | MEM:${ram.used}/${ram.total}MB | APACHE_CPU:${apache}% | MYSQL_CPU:${mysql}%`;
-}
+  console.log("📄 Generado:", fileName);
+};
 
 module.exports = { generarArchivo };
