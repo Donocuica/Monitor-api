@@ -12,9 +12,16 @@ body {
   padding: 20px;
 }
 
+.table-container {
+  max-height: 400px;   /* 👈 altura */
+  overflow-y: auto;    /* 👈 scroll */
+  border: 1px solid #333;
+}
+
 table {
   width: 100%;
   background: #1e293b;
+  border-collapse: collapse;
 }
 
 th, td {
@@ -23,6 +30,8 @@ th, td {
 
 th {
   background: #020617;
+  position: sticky;  /* 👈 header fijo */
+  top: 0;
 }
 
 button {
@@ -39,25 +48,30 @@ pre {
   background: black;
   padding: 10px;
   margin-top: 20px;
+  max-height: 300px;
+  overflow-y: auto;
 }
 </style>
 </head>
 
 <body>
+
 <h2>📁 Archivos generados</h2>
 
-<table border="1">
-<thead>
-<tr>
-<th>Archivo</th>
-<th>Acciones</th>
-</tr>
-</thead>
+<div class="table-container">
+  <table border="1">
+    <thead>
+      <tr>
+        <th>Archivo</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
 
-<tbody id="tabla">
-<tr><td colspan="2">Cargando...</td></tr>
-</tbody>
-</table>
+    <tbody id="tabla">
+      <tr><td colspan="2">Cargando...</td></tr>
+    </tbody>
+  </table>
+</div>
 
 <h2>📄 Contenido</h2>
 <pre id="contenido">---</pre>
@@ -65,12 +79,8 @@ pre {
 <script>
 async function cargarArchivos() {
   try {
-    console.log("🚀 LLAMANDO A /files...");
-
     const res = await fetch("/files");
     const files = await res.json();
-
-    console.log("📄 RESPUESTA:", files);
 
     let html = "";
 

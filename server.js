@@ -68,7 +68,7 @@ app.get("/download/:name", (req, res) => {
 app.use(express.static("public"));
 
 app.listen(3000, "0.0.0.0", () => {
-  console.log("🔥 Servidor activo");
+  console.log(" Servidor activo");
 
   generarArchivo();
 
